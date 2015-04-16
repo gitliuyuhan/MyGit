@@ -90,7 +90,7 @@ int JudgeUpdate(MapType elem,int v)
 		for(i=0;i<=ready.top;i++)
 			if(Samekind(elem,ready.data[i]))
 			{
-				ready.data[i].select = ready.data[i].select & (~v);   //与反码取&消去已尝试的数
+				ready.data[i].select = ready.data[i].select & (~status[v]);   //与反码取&消去已尝试的数
 				if(ready.select==0)
 				{
 					fun(huifu);
@@ -100,7 +100,21 @@ int JudgeUpdate(MapType elem,int v)
 		return 1;
 	}
 	else
-	{}
+	{
+		for(i=0;i<=ready.top;i++)
+			if(elem.ckey==ready.data[i].ckey)
+			{
+				if(ready.data[i].select & status[v]==0)
+				{
+					fun(huifu);
+					return 0;
+				}
+				else
+				{
+
+				}
+			}
+	}
 }
 
 //初始化栈
