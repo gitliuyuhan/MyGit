@@ -52,16 +52,55 @@ int Selectnum(int binary)
 	return count;
 }
 
-//获取该位置第一个可取值
-int Getvalue(int binary)
+//获取该位置可取值
+int Getvalue(int binary,int key)
 {
 	int i;
-	for(i=1;i<=9;i++)
+	for(i=key;i<=9;i++)
 	{
 		if(binary & status[i]>0)
 			return i;
 	}
 	return 0;
+}
+
+//判断是否同列或同行或同宫
+int Samekind(MapType elem1,MapType elem2)
+{
+	if(elem1.x==elem2.x||elem1.y==elem2.y||((elem1.x*3+elem1.y)/3)==((elem2.x*3+elem2.y)/3))
+		return 1;
+	return 0;
+}
+
+//更新同行列宫的状态
+int UpdateKind(MapType elem,int v)
+{
+	C[elem.x] = C[elem.x] | status[v];  //更新行列宫的状态标志
+	R[elem.y] = R[elem.y] | status[v];
+	F[(elem.x*3+elem.y)/3] = F[(elem.x*3+elem.y)/3] | status[v];
+}
+
+//判断和更新
+int JudgeUpdate(MapType elem,int v)
+{
+	int     i;
+	if(elem.ckey=='e'||elem.ckey=='o'||elem.ckey=='0')
+	{
+		UpdateKind(elem,v);
+		for(i=0;i<=ready.top;i++)
+			if(Samekind(elem,ready.data[i]))
+			{
+				ready.data[i].select = ready.data[i].select & (~v);   //与反码取&消去已尝试的数
+				if(ready.select==0)
+				{
+					fun(huifu);
+					return 0;
+				}
+			}
+		return 1;
+	}
+	else
+	{}
 }
 
 //初始化栈
