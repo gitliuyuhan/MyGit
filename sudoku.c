@@ -9,7 +9,10 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-#define     MAX    81   //格子总数
+#define     MAX          81       //格子总数
+#define     KEEPODD      341      //101010101 保留奇数
+#define     KEEPEVEN     170      //010101010 保留偶数
+
 //状态值
 const int status[10] = {0,1,2,4,8,16,32,64,128,256};
                         //000000000~100000000
@@ -73,7 +76,7 @@ int Samekind(MapType elem1,MapType elem2)
 }
 
 //更新同行列宫的状态
-int UpdateKind(MapType elem,int v)
+int UpdateCRF(MapType elem,int v)
 {
 	C[elem.x] = C[elem.x] | status[v];  //更新行列宫的状态标志
 	R[elem.y] = R[elem.y] | status[v];
@@ -83,37 +86,110 @@ int UpdateKind(MapType elem,int v)
 //判断和更新
 int JudgeUpdate(MapType elem,int v)
 {
-	int     i;
-	if(elem.ckey=='e'||elem.ckey=='o'||elem.ckey=='0')
+	int     i,j,err=1;
+	if(elem.ckey=='e'||elem.ckey=='o'||elem.ckey=='0')  //数字或奇偶数
 	{
-		UpdateKind(elem,v);
+		UpdateCRF(elem,v);
 		for(i=0;i<=ready.top;i++)
 			if(Samekind(elem,ready.data[i]))
 			{
 				ready.data[i].select = ready.data[i].select & (~status[v]);   //与反码取&消去已尝试的数
+				ready.data[i].n--;
 				if(ready.select==0)
 				{
-					fun(huifu);
+					for(j=i;j>=0;j--)
+						if(Samekind(elem,ready.data[j]))
+						{
+							ready.data[j].select = ready.data[j] | (~status[v]);
+							ready.data[i].n++;
+						}
 					return 0;
 				}
 			}
 		return 1;
 	}
-	else
+	else           //字母
 	{
 		for(i=0;i<=ready.top;i++)
 			if(elem.ckey==ready.data[i].ckey)
 			{
 				if(ready.data[i].select & status[v]==0)
 				{
-					fun(huifu);
+					for(j=ready.charbase;j<MAX;j++)
+						if(elem.ckey==ready.data[j].ckey)
+						{
+							ready.data[j].select = ready.data[j].select | (~status[v]);
+							ready.data[j].n++;
+							ready.data[j].value = 0;
+							ready.top++;
+							ready.data[ready.top] = ready.data[j];
+						    ready.charbase++;	
+						}
 					return 0;
 				}
 				else
 				{
-
+					ready.data[i].select = ready.data[i].select & (~status[v]);
+					ready.charbase--;
+					ready.data[ready.charbase] = ready.data[i];
+					ready.data[ready.charbase].value = v;
+					ready.data[ready.charbase].n--;
+					ready.data[i] = ready.data[ready.top];     //用队顶填补空缺
+					ready.top--;
+					UpdateCRF(ready.data[ready.charbase],v);
+					Pos[ready.data[ready.charbase].x][ready.data[ready.charbase].y] = v;
 				}
 			}
+		for(i=0;i<=ready.top&&err!=0;i++)
+		{
+			if(Samekind(elem,ready.data[i]))
+			{
+				ready.data[i].select = ready.data[i].select & (~status[v]);
+				ready.data[i].n--;
+				if(ready,data[i].select==0)
+				{
+					err = 0;
+					break;
+				}
+				continue;
+			}
+			for(j=ready.charbase;j<MAX;j++)
+			{
+				if(Samekind(ready.data[j],ready.data[i]))
+				{
+					ready.data[i].select = ready.data[i].select & (~status[v]);
+					ready.data[i].n--;
+					if(ready.data[i].select==0)
+					{
+						err = 0;
+						break;
+					}
+					break;
+				}
+			}
+		}
+		if(err==0)
+		{
+			for(j=i;j>=0;j--)
+				if(Samekind(elem,ready.data[j]))
+				{
+					ready.data[j].select = ready.data[j] | (~status[v]);
+					ready.data[i].n++;
+				}
+			for(j=ready.charbase;j<MAX;j++)
+				if(elem.ckey==ready.data[j].ckey)
+				{
+					ready.data[j].select = ready.data[j].select | (~status[v]);
+					ready.data[j].n++;
+					ready.data[j].value = 0;
+					ready.top++;
+					ready.data[ready.top] = ready.data[j];
+					ready.charbase++;	
+				}
+			return 0;
+
+		}
+		return 1;
 	}
 }
 
@@ -148,91 +224,27 @@ MapType PopS()
 //放入候选队
 void PushQ(MapType elem)
 {
-	int     i;
 	ready.top++;
-	i = ready.top;
-	while(i!=0 && elem.n>ready.data[i-1].n)
-	{
-		ready.data[i] = ready.data[i-1];
-		i--;
-	}
-	ready.data[i] = elem;
-}
-
-int  UpdataStatus(MapType elem,int v)
-{
-	int         i,x,y;
-	
-	elem.select = elem.select & (~v);   //与反码取&消去已尝试的数
-
-	C[elem.x] = C[elem.x] | status[v];  //更新行列宫的状态标志
-	R[elem.y] = R[elem.y] | status[v];
-	F[(elem.x*3+elem.y)/3] = F[(elem.x*3+elem.y)/3] | status[v];
-
-	for(i=ready.top;i>=0;i--)
-	{
-		x = ready.data[i].x;
-		y = ready.data[i].y;
-		if(x==elem.x||y==elem.y||((x*3+y)/3)==((elem.x*3+elem.y)/3))  //包含所取数字
-		{
-		   	ready.data[i].select = (~C[x]) & (~R[y]) & (~F[(x*3+y)/3]) & 511;
-			ready.data[i].n = Getvalue(ready.data[i].select);
-			if(elem.ckey==ready.data[i].ckey&&elem.ckey>='a'&&(ready.data[i].select&v)==0)
-				return 0;
-            if(ready.data[i].n==0)
-				return 0;         //无解
-			for(k=i;k<=ready.top && ready.data[k].n<ready.data[k+1].n;k++)
-			{
-				t = ready.data[k];
-				ready.data[k] = ready.data[k+1];
-				ready.data[k+1] = t;
-			}
-		}
-	}
-	return 1;
+	ready.data[ready.top] = elem;
 }
 
 //出候选队
-int PopQ(MapType *elempoint)
+MapType  PopQ()
 {
-	MapType     elem,t;
-	int         i,k,x,y,v;
-	elem = ready.data[ready.top];
-	if(elem.value>0)
+	MapType  elem;
+	int         i,k=0;
+	for(i=1;i<=ready.top;i++)
 	{
-		ready.top--;
-		*elempoint = elem;
-		return 1;
+		if(ready.data[i].n>ready.data[k])
+			k = i;
 	}
-	i = ready.top;
-	v = Getvalue(elem.select);
-	if(elem.ckey>='a')
-	{
-		elem.value = v;
-		elem.select = elem.select & (~v);
-		*elempoint = elem;
-		return 1;
-	}
-
-	if(UpdataSort(i,v)==0)
-		return 0;
-	i = --ready.top;
-	if(UpdataSort(i,v)==0)
-		return 0;
-	if(elem.ckey>='a')
-	{
-		for(i=i-1;i>=0;i--)
-		{
-			if(ready.data[i].ckey==elem.ckey)
-			{
-				ready.data[i].value = v;
-				if(UpdataSort(i,v)==0)
-					return 0;
-			}
-		}
-	}
-	*elempoint = elem;
-	return 1;
+	elem = ready.data[k];
+	ready.data[k] = ready.data[ready.top];
+	ready.top--;
+	elem.value = Getvalue(elem,1);
+	elem.n--;
+	elem.select = elem.select & (~status[elem.value]);
+	return elem;
 }
 
 //初始化棋盘
@@ -265,6 +277,10 @@ int  Init_Map(int OrgMap[9][9])
 			if(Pos[i][j][0]==0)
 			{
 				Pos[i][j][1] = (~C[i])&(~R[j])&(~F[(i*3+j)/3])&511;
+				if(Pos[i][j][2]=='o')
+					Pos[i][j][1] = Pos[i][j][1] & KEEPODD;     //过滤偶数
+				if(Pos[i][j][2]=='e')
+					Pos[i][j][1] = Pos[i][j][1] & KEEPEVEN;    //过滤奇数
 				if(Pos[i][j][1]==0)
 					return 0;
 			}
