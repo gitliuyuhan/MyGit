@@ -348,14 +348,15 @@ void RenewKind(MapType elem,int v)
 			}
 		}
 		for(j=ready.charbase;j<MAX;j++)
-		{
-			ready.top++;
-			ready.data[j].select = ready.data[j].select | status[v];
-			ready.data[j].n++;
-			ready.data[j].value = 0;
-			ready.data[ready.top] = ready.data[j];
-			ready.charbase++;
-		}
+			if(ready.data[j].ckey==elem.ckey)
+			{
+				ready.top++;
+				ready.data[j].select = ready.data[j].select | status[v];
+				ready.data[j].n++;
+				ready.data[j].value = 0;
+				ready.data[ready.top] = ready.data[j];
+				ready.charbase++;
+			}
 	}
 }
 
@@ -474,11 +475,11 @@ int Solve(int OrgMap[9][9])
 					elem = pass.data[pass.top];
 					printf("    :[%d,%d] value=%d  select=%d n=%d\n",elem.x,elem.y,elem.value,elem.select,elem.n);
                     k = JudgeUpdate(elem,v);
-/*					printf("-----------------\n");
+					printf("-----------------\n");
 					for(i=0;i<=ready.top;i++)
 						printf("[%d,%d] value=%d select=%s n=%d num=%d\n",ready.data[i].x,ready.data[i].y,ready.data[i].value,Inputb(ready.data[i].select),ready.data[i].n,i);
 				    printf("-----------------\n");
-*/					if(k)
+					if(k)
 					{
 //						printf("    :[%d,%d] value=%d  select=%d n=%d\n",elem.x,elem.y,elem.value,elem.select,elem.n);
 						Pos[elem.x][elem.y][0] = v;
